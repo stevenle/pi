@@ -42,19 +42,23 @@ def build(args):
   request = {
       'src': 'https://github.com/stevenle/pi.git',
       'pkg': 'github.com/stevenle/pi',
-      'target': 'github.com/stevenle/pi/{}'.format(target),
+      'target': 'github.com/stevenle/pi/{}'.format(args.target),
   }
   payload = json.dumps(request)
 
-  response = requests.post(args.gocloud, headers=headers, data=payload)
+  response = requests.post(
+      args.gocloud, headers=headers, data=payload, verify=args.ssl)
   if response.status_code != 200:
     raise Error('Error {}'.format(response.status_code))
 
-  with open(args.output, 'w') as fp:
+  output = args.output
+  if not output:
+    output, _ = os.path.splitext(os.path.basename(args.target))
+  with open(output, 'w') as fp:
     fp.write(response.content)
 
   # Equivalent to chmod +x.
-  os.chmod(args.output, os.stat(args.output).st_mod | stat.S_IEXEC)
+  os.chmod(output, os.stat(output).st_mode | stat.S_IEXEC)
 
 
 def main():
@@ -63,6 +67,7 @@ def main():
   parser.add_argument('--private_key', '-k', dest='private_key')
   parser.add_argument('--gocloud')
   parser.add_argument('--output', '-o', dest='output')
+  parser.add_argument('--nossl', dest='ssl', action='store_false', default=True)
   parser.add_argument('cmd')
   parser.add_argument('target')
   args = parser.parse_args()
